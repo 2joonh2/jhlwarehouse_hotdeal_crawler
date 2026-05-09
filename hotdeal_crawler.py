@@ -1,29 +1,28 @@
 import pandas as pd
-import requests # urllib 대신 requests 사용
+import requests
 from bs4 import BeautifulSoup
 import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 import os
-import time
 
 def get_hotdeal_df():
     url = 'https://www.fmkorea.com/hotdeal'
     
-    # 헤더를 더 정교하게 설정 (브라우저인 척 하기)
+    # 브라우저처럼 보이도록 헤더를 더 상세하게 설정합니다.
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
         'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
-        'Referer': 'https://www.google.com/' # 구글을 통해서 들어온 척 하기
+        'Referer': 'https://www.google.com/' # 구글 검색을 통해 들어온 것처럼 위장
     }
 
     try:
-        # 세션을 사용하여 접속 유지력 강화
+        # 세션을 사용하여 차단 확률을 낮춥니다.
         session = requests.Session()
         response = session.get(url, headers=headers, timeout=30)
         
-        # 만약 차단(430, 403 등)되었다면 에러 발생
+        # 430 등 에러 발생 시 예외를 던집니다.
         response.raise_for_status() 
         
         bs = BeautifulSoup(response.text, 'html.parser')
@@ -38,8 +37,7 @@ def get_hotdeal_df():
             info = {
                 'Title': title_tag.get_text(strip=True) if title_tag else "N/A",
                 'Vote': vote_tag.get_text(strip=True) if vote_tag else '0',
-                'URL': 'https://fmkorea.com' + link_tag.attrs['href'] if link_tag else "N/A",
-                'Shop': '', 'Price': '', 'Shipping': '' # 기본값 초기화
+                'URL': 'https://fmkorea.com' + link_tag.attrs['href'] if link_tag else "N/A"
             }
             
             metas = elem.find_all('span')
@@ -53,8 +51,28 @@ def get_hotdeal_df():
         return pd.DataFrame(data)
 
     except Exception as e:
-        print(f"데이터 수집 중 에러 발생: {e}")
+        print(f"데이터 수집 에러: {e}")
         return pd.DataFrame()
 
-# send_email 함수는 이전과 동일
-# ...
+def send_email(df):
+    sender_email = "2joonh2@gmail.com"
+    receiver_email = "2joonh2@gmail.com"
+    password = os.environ.get('EMAIL_PASSWORD')
+
+    msg = MIMEMultipart()
+    msg['From'] = sender_email
+    msg['To'] = receiver_email
+    msg['Subject'] = "[실시간 알림] 펨코 핫딜 업데이트"
+
+    html_body = f"<h2>현재 핫딜 목록</h2>{df.to_html(escape=False, render_links=True, index=False)}"
+    msg.attach(MIMEText(html_body, 'html'))
+
+    with smtplib.SMTP('smtp.gmail.com', 587) as server:
+        server.starttls()
+        server.login(sender_email, password)
+        server.send_message(msg)
+
+if __name__ == "__main__":
+    hotdeal_df = get_hotdeal_df()
+    if not hotdeal_df.empty:
+        send_email(hotdeal_df)
