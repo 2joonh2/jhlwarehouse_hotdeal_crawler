@@ -5,10 +5,8 @@ import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 import os
-
 def get_hotdeal_df():
     with sync_playwright() as p:
-        # 브라우저 실행
         browser = p.chromium.launch(headless=True)
         context = browser.new_context(
             user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
@@ -16,21 +14,17 @@ def get_hotdeal_df():
         page = context.new_page()
         
         try:
-            # 1. 페이지 접속 (domcontentloaded로 구조만 먼저 읽음)
-            page.goto('https://www.fmkorea.com/hotdeal', wait_until='domcontentloaded', timeout=30000)
+            # 1. 주소를 '위젯'이 아닌 '게시판 목록'으로 변경
+            target_url = 'https://www.fmkorea.com/index.php?mid=hotdeal&category=1255812032' 
+            page.goto(target_url, wait_until='domcontentloaded', timeout=30000)
             
-            # 2. 데이터 로딩 대기 (NoneType 에러 방지 핵심)
-            # 핫딜 컨테이너 요소가 나타날 때까지 최대 15초 대기합니다.
-            try:
-                page.wait_for_selector("div.fm_best_widget._bd_pc", timeout=15000)
-            except Exception as timeout_e:
-                print(f"대기 시간 초과: 요소를 찾을 수 없습니다. ({timeout_e})")
-                browser.close()
-                return pd.DataFrame()
-
-            # 3. HTML 파싱
+            # 2. 게시판 목록의 테이블 요소가 뜰 때까지 대기
+            # 게시판 목록은 보통 'bd_lst' 클래스를 사용합니다.
+            page.wait_for_selector("ul.fm_best_widget", timeout=15000)
+            
             content = page.content()
             bs = BeautifulSoup(content, 'html.parser')
+        
             
             # 4. 컨테이너 추출 및 안전성 검사
             container = bs.find("div", class_="fm_best_widget _bd_pc")
