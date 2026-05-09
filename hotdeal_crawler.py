@@ -1,50 +1,60 @@
 import pandas as pd
 from bs4 import BeautifulSoup
-from playwright.sync_api import sync_playwright
+from playwright.sync_api import sync_playwright # 다시 동기 API 사용
 import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 import os
 
-
 def get_hotdeal_df():
     with sync_playwright() as p:
+        # 브라우저 실행
         browser = p.chromium.launch(headless=True)
-        # 실제 브라우저와 구분하기 어렵도록 설정 강화
         context = browser.new_context(
-            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-            viewport={'width': 1920, 'height': 1080}
+            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
         )
         page = context.new_page()
         
         try:
-            # 전략 변경: 'networkidle' 대신 'domcontentloaded' 사용 (훨씬 빠름)
-            # 타임아웃은 30초로 설정하되, 핵심 데이터만 뜨면 바로 진행합니다.
+            # 1. 페이지 접속 (domcontentloaded로 구조만 먼저 읽음)
             page.goto('https://www.fmkorea.com/hotdeal', wait_until='domcontentloaded', timeout=30000)
             
-            # 페이지 레이아웃이 잡힐 때까지만 아주 잠시(2초) 대기
-            page.wait_for_timeout(2000) 
+            # 2. 데이터 로딩 대기 (NoneType 에러 방지 핵심)
+            # 핫딜 컨테이너 요소가 나타날 때까지 최대 15초 대기합니다.
+            try:
+                page.wait_for_selector("div.fm_best_widget._bd_pc", timeout=15000)
+            except Exception as timeout_e:
+                print(f"대기 시간 초과: 요소를 찾을 수 없습니다. ({timeout_e})")
+                browser.close()
+                return pd.DataFrame()
+
+            # 3. HTML 파싱
+            content = page.content()
+            bs = BeautifulSoup(content, 'html.parser')
             
-            html_content = page.content()
-            bs = BeautifulSoup(html_content, 'html.parser')
-            
-            # (이하 기존 파싱 로직 동일)
-            # ...
-            
-            crawled = bs.find("div", class_="fm_best_widget _bd_pc").find_all('li')
+            # 4. 컨테이너 추출 및 안전성 검사
+            container = bs.find("div", class_="fm_best_widget _bd_pc")
+            if not container:
+                print("컨테이너가 HTML 내에 존재하지 않습니다.")
+                browser.close()
+                return pd.DataFrame()
+
+            crawled = container.find_all('li')
             data = []
+            
             for elem in crawled:
                 title_tag = elem.find('h3', class_='title')
                 link_tag = elem.find('a')
                 vote_tag = elem.find('span', class_='count')
                 
-                info = {
-                    'Title': title_tag.get_text(strip=True) if title_tag else "N/A",
-                    'Vote': vote_tag.get_text(strip=True).replace('[', '').replace(']', '') if vote_tag else '0',
-                    'URL': 'https://fmkorea.com' + link_tag.attrs['href'] if link_tag else "N/A",
-                    'Shop': '', 'Price': '', 'Shipping': ''
-                }
+                # 데이터 정제
+                title = title_tag.get_text(strip=True) if title_tag else "N/A"
+                link = 'https://fmkorea.com' + link_tag.attrs['href'] if link_tag else "N/A"
+                vote = vote_tag.get_text(strip=True).replace('[', '').replace(']', '') if vote_tag else '0'
                 
+                info = {'Title': title, 'Vote': vote, 'URL': link, 'Shop': '', 'Price': '', 'Shipping': ''}
+                
+                # 메타 정보 추출
                 metas = elem.find_all('span')
                 for meta in metas:
                     text = meta.get_text(strip=True)
@@ -57,8 +67,8 @@ def get_hotdeal_df():
             return pd.DataFrame(data)
 
         except Exception as e:
-            print(f"브라우저 구동 중 에러: {e}")
-            browser.close()
+            print(f"브라우저 실행 중 에러 발생: {e}")
+            if 'browser' in locals(): browser.close()
             return pd.DataFrame()
 
 def send_email(df):
@@ -69,8 +79,9 @@ def send_email(df):
     msg = MIMEMultipart()
     msg['From'] = sender_email
     msg['To'] = receiver_email
-    msg['Subject'] = "[실시간 알림] 펨코 핫딜 업데이트 (Playwright)"
+    msg['Subject'] = "[실시간 알림] 펨코 핫딜 업데이트"
 
+    # DF를 HTML 표로 변환
     html_body = f"<h2>현재 핫딜 목록</h2>{df.to_html(escape=False, render_links=True, index=False)}"
     msg.attach(MIMEText(html_body, 'html'))
 
@@ -80,6 +91,8 @@ def send_email(df):
         server.send_message(msg)
 
 if __name__ == "__main__":
-    df = get_hotdeal_df()
-    if not df.empty:
-        send_email(df)
+    hotdeal_df = get_hotdeal_df()
+    if not hotdeal_df.empty:
+        send_email(hotdeal_df)
+    else:
+        print("수집된 데이터가 없습니다.")
