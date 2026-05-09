@@ -2,33 +2,32 @@ name: Hourly Hotdeal Crawler
 
 on:
   schedule:
-    - cron: '0 * * * *'
-  workflow_dispatch:      
+    # 0분 정각에는 봇이 몰려 차단될 확률이 높으므로 '17분'으로 설정
+    - cron: '17 * * * *'
+  workflow_dispatch:
 
 jobs:
   run-crawler:
     runs-on: ubuntu-latest
     steps:
-      # Node.js 24 대응을 위해 최신 v4 사용
       - name: Checkout code
-        uses: actions/checkout@v4 
+        uses: actions/checkout@v4
 
-      # Node.js 24 대응을 위해 최신 v5 사용
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-            
-      - name: Install Playwright
-        run: |
-          pip install playwright
-          playwright install chromium
-          
+
       - name: Install dependencies
-        run: pip install pandas beautifulsoup4 lxml requests # requests 추가
+        run: |
+          pip install pandas beautifulsoup4 lxml playwright
+          playwright install chromium
 
       - name: Execute script
         env:
           EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
-        # 이전 에러 로그에 파일 위치가 확인되었으므로 경로를 고정합니다.
-        run: python JHLWAREHOUSE_PKG_1/hotdeal_crawler.py
+        # find 명령어를 통해 폴더 깊숙이 있는 hotdeal_crawler.py를 자동으로 찾아 실행합니다.
+        run: |
+          FILE_PATH=$(find . -name "hotdeal_crawler.py" | head -n 1)
+          echo "실행할 파일 경로: $FILE_PATH"
+          python "$FILE_PATH"
