@@ -23,4 +23,4 @@ jobs:
       - name: Execute script
         env:
           EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
-        run: python hotdeal_crawler.py
+        run: python JHLWAREHOUSE_PKG_1/hotdeal_crawler.py
