@@ -2,12 +2,12 @@ name: Hourly Hotdeal Crawler
 
 on:
   schedule:
-    # 0분 정각에는 봇이 몰려 차단될 확률이 높으므로 '17분'으로 설정
-    - cron: '17 * * * *'
-  workflow_dispatch:
+    # 정각보다는 17분, 34분처럼 애매한 시간이 차단 확률이 낮습니다.
+    - cron: '34 * * * *' 
+  workflow_dispatch: # 수동 실행 버튼
 
 jobs:
-  run-crawler:
+  build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -20,14 +20,13 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install pandas beautifulsoup4 lxml playwright
+          pip install pandas beautifulsoup4 lxml playwright playwright-stealth
           playwright install chromium
 
-      - name: Execute script
+      - name: Run Crawler
         env:
           EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
-        # find 명령어를 통해 폴더 깊숙이 있는 hotdeal_crawler.py를 자동으로 찾아 실행합니다.
         run: |
+          # 파일 경로를 자동으로 찾아 실행 (중첩 폴더 대응)
           FILE_PATH=$(find . -name "hotdeal_crawler.py" | head -n 1)
-          echo "실행할 파일 경로: $FILE_PATH"
           python "$FILE_PATH"
