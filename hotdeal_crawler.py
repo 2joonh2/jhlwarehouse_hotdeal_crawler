@@ -9,20 +9,21 @@ import os
 def get_hotdeal_df():
     url = 'https://www.fmkorea.com/hotdeal'
     
-    # 브라우저처럼 보이도록 헤더를 더 상세하게 설정합니다.
+    # 브라우저처럼 보이도록 헤더 보강
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
         'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
-        'Referer': 'https://www.google.com/' # 구글 검색을 통해 들어온 것처럼 위장
+        'Referer': 'https://www.google.com/', # 구글을 통해 들어온 척 하기
+        'Connection': 'keep-alive'
     }
 
     try:
-        # 세션을 사용하여 차단 확률을 낮춥니다.
+        # 세션을 사용하여 차단 확률을 낮춤
         session = requests.Session()
         response = session.get(url, headers=headers, timeout=30)
         
-        # 430 등 에러 발생 시 예외를 던집니다.
+        # 430 등 에러 발생 시 예외 발생
         response.raise_for_status() 
         
         bs = BeautifulSoup(response.text, 'html.parser')
