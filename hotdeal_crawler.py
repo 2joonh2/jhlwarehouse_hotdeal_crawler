@@ -5,20 +5,24 @@ import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 import os
-
 def get_hotdeal_df():
-    # Playwright를 사용하여 실제 브라우저로 접속
     with sync_playwright() as p:
+        # 스텔스 모드와 유사한 환경 설정
         browser = p.chromium.launch(headless=True)
-        # 일반 사용자의 브라우저 정보와 유사하게 세팅
         context = browser.new_context(
-            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+            viewport={'width': 1920, 'height': 1080}
         )
         page = context.new_page()
         
         try:
-            # 펨코 핫딜 페이지 접속 및 로딩 대기
-            page.goto('https://www.fmkorea.com/hotdeal', wait_until='networkidle', timeout=60000)
+            # 1. 대기 전략 변경: 'networkidle' 대신 'domcontentloaded' 사용 (훨씬 빠름)
+            # 2. 타임아웃을 30초로 줄이되, 실패 시 재시도 로직 권장
+            page.goto('https://www.fmkorea.com/hotdeal', wait_until='domcontentloaded', timeout=30000)
+            
+            # 페이지가 뜬 후 아주 잠시만(2초) 기다려 데이터 안정화
+            page.wait_for_timeout(2000) 
+            
             html_content = page.content()
             bs = BeautifulSoup(html_content, 'html.parser')
             
