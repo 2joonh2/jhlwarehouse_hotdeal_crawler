@@ -20,7 +20,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install pandas beautifulsoup4 lxml playwright playwright-stealth
+          pip install pandas beautifulsoup4 lxml playwright nest_asyncio
           playwright install chromium
 
       - name: Run Crawler
