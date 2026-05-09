@@ -5,10 +5,12 @@ import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 import os
+
+
 def get_hotdeal_df():
     with sync_playwright() as p:
-        # 스텔스 모드와 유사한 환경 설정
         browser = p.chromium.launch(headless=True)
+        # 실제 브라우저와 구분하기 어렵도록 설정 강화
         context = browser.new_context(
             user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
             viewport={'width': 1920, 'height': 1080}
@@ -16,15 +18,18 @@ def get_hotdeal_df():
         page = context.new_page()
         
         try:
-            # 1. 대기 전략 변경: 'networkidle' 대신 'domcontentloaded' 사용 (훨씬 빠름)
-            # 2. 타임아웃을 30초로 줄이되, 실패 시 재시도 로직 권장
+            # 전략 변경: 'networkidle' 대신 'domcontentloaded' 사용 (훨씬 빠름)
+            # 타임아웃은 30초로 설정하되, 핵심 데이터만 뜨면 바로 진행합니다.
             page.goto('https://www.fmkorea.com/hotdeal', wait_until='domcontentloaded', timeout=30000)
             
-            # 페이지가 뜬 후 아주 잠시만(2초) 기다려 데이터 안정화
+            # 페이지 레이아웃이 잡힐 때까지만 아주 잠시(2초) 대기
             page.wait_for_timeout(2000) 
             
             html_content = page.content()
             bs = BeautifulSoup(html_content, 'html.parser')
+            
+            # (이하 기존 파싱 로직 동일)
+            # ...
             
             crawled = bs.find("div", class_="fm_best_widget _bd_pc").find_all('li')
             data = []
