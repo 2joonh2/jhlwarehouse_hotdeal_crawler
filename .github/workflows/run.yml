@@ -2,20 +2,22 @@ name: Hourly Hotdeal Crawler
 
 on:
   schedule:
-    - cron: '0 * * * *' # 매시간 정시 실행 (UTC 기준)
-  workflow_dispatch:      # 수동 실행 버튼 활성화
+    - cron: '0 * * * *'
+  workflow_dispatch:      
 
 jobs:
   run-crawler:
     runs-on: ubuntu-latest
     steps:
+      # Node.js 24 대응을 위해 최신 v4 사용
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4 
 
+      # Node.js 24 대응을 위해 최신 v5 사용
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.9'
+          python-version: '3.11'
 
       - name: Install dependencies
         run: pip install pandas beautifulsoup4 lxml
@@ -23,4 +25,15 @@ jobs:
       - name: Execute script
         env:
           EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
-        run: python JHLWAREHOUSE_PKG_1/hotdeal_crawler.py
+        # 에러 메시지 기반: 저장소 루트가 아닌 하위 폴더에 파일이 있는 경우를 대비
+        # 만약 파일이 루트에 있다면 'python hotdeal_crawler.py'로 수정하세요.
+        run: |
+          if [ -f "hotdeal_crawler.py" ]; then
+            python hotdeal_crawler.py
+          elif [ -f "JHLWAREHOUSE_PKG_1/hotdeal_crawler.py" ]; then
+            python JHLWAREHOUSE_PKG_1/hotdeal_crawler.py
+          else
+            echo "파일을 찾을 수 없습니다. 현재 디렉토리 목록:"
+            ls -R
+            exit 1
+          fi
