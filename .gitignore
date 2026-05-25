@@ -203,6 +203,13 @@ cython_debug/
 # Temporary file for partial code execution
 tempCodeRunnerFile.py
 
+# Local Android/Termux deployment artifacts
+platform-tools/
+platform-tools.zip
+termux.apk
+*.apk
+fmk_sample*.html
+
 # Ruff stuff:
 .ruff_cache/
 
