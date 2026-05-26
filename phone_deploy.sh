@@ -53,14 +53,34 @@ export PATH="$PREFIX/bin:/system/bin"
 export LD_LIBRARY_PATH="$PREFIX/lib"
 
 APP_DIR="$HOME/jhlwarehouse_hotdeal_crawler"
-INTERVAL_SECONDS="${HOTDEAL_INTERVAL_SECONDS:-600}"
+if [ -f "$APP_DIR/.env" ]; then
+  set -a
+  . "$APP_DIR/.env"
+  set +a
+fi
+
+RUN_MINUTE="${HOTDEAL_RUN_MINUTE:-3}"
 
 termux-wake-lock || true
 mkdir -p "$APP_DIR/logs"
 
+next_run_epoch() {
+  now="$(date +%s)"
+  current_hour="$(date '+%Y-%m-%d %H')"
+  target="$(date -d "$current_hour:$RUN_MINUTE:00" +%s)"
+  if [ "$target" -le "$now" ]; then
+    target="$((target + 3600))"
+  fi
+  printf '%s\n' "$target"
+}
+
 while true; do
+  target="$(next_run_epoch)"
+  now="$(date +%s)"
+  sleep_seconds="$((target - now))"
+  echo "Next hotdeal run: $(date -d "@$target" '+%Y-%m-%d %H:%M:%S %z') (sleep ${sleep_seconds}s)" >> "$APP_DIR/logs/loop.out"
+  sleep "$sleep_seconds"
   "$APP_DIR/run_once.sh" >> "$APP_DIR/logs/hotdeal.log" 2>&1 || true
-  sleep "$INTERVAL_SECONDS"
 done
 EOF
 
@@ -115,6 +135,7 @@ if [ ! -f "$APP_DIR/.env" ]; then
 # EMAIL_SENDER=2joonh2@gmail.com
 # EMAIL_TO=2joonh2@gmail.com
 HOTDEAL_INTERVAL_SECONDS=3600
+HOTDEAL_RUN_MINUTE=3
 HOTDEAL_KEYWORD_FILE=keywords.txt
 HOTDEAL_ALERT_ONLY=false
 EOF

@@ -6,7 +6,7 @@ FMK hotdeal crawler that runs on an Android phone through Termux. It fetches the
 
 - Runs directly on an Android phone, avoiding GitHub Actions IP blocking.
 - Crawls `https://www.fmkorea.com/hotdeal`.
-- Sends an HTML email digest every hour.
+- Sends an HTML email digest once per hour at the configured minute.
 - Watches configurable keywords such as `MX KEYS`.
 - Uses a richer card-style email body with title, price, vote count, shop, and delivery.
 
@@ -79,11 +79,14 @@ EMAIL_PASSWORD="your gmail app password"
 EMAIL_SENDER=2joonh2@gmail.com
 EMAIL_TO=2joonh2@gmail.com
 HOTDEAL_INTERVAL_SECONDS=3600
+HOTDEAL_RUN_MINUTE=3
 HOTDEAL_KEYWORD_FILE=keywords.txt
 HOTDEAL_ALERT_ONLY=false
 ```
 
 `HOTDEAL_ALERT_ONLY=false` means the crawler sends the normal hourly digest even when no keyword matches. Set it to `true` to send only keyword alert emails.
+
+`HOTDEAL_RUN_MINUTE=3` means the background loop runs once every hour at minute `03`, for example `10:03`, `11:03`, and `12:03`.
 
 ## Manual Run On Phone
 
@@ -125,7 +128,7 @@ Keyword matching is case-insensitive and checks title, shop, price, and delivery
 
 ## Background Loop
 
-Start the hourly loop:
+Start the hourly loop. The loop waits until the next configured minute before running:
 
 ```sh
 cd ~/jhlwarehouse_hotdeal_crawler
