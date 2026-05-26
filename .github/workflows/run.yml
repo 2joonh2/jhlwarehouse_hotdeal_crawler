@@ -1,38 +1,38 @@
-name: Hourly Hotdeal Crawler
+# name: Hourly Hotdeal Crawler
 
-on:
-  schedule:
-    # 정각보다는 17분, 34분처럼 애매한 시간이 차단 확률이 낮습니다.
-    - cron: '34 * * * *' 
-  workflow_dispatch: # 수동 실행 버튼
+# on:
+#   schedule:
+#     # 정각보다는 17분, 34분처럼 애매한 시간이 차단 확률이 낮습니다.
+#     - cron: '34 * * * *' 
+#   workflow_dispatch: # 수동 실행 버튼
 
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+# jobs:
+#   build:
+#     runs-on: ubuntu-latest
+#     steps:
+#       - name: Checkout code
+#         uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
+#       - name: Set up Python
+#         uses: actions/setup-python@v5
+#         with:
+#           python-version: '3.11'
 
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install pandas beautifulsoup4 lxml playwright nest_asyncio
-          playwright install --with-deps chromium
+#       - name: Install dependencies
+#         run: |
+#           python -m pip install --upgrade pip
+#           pip install pandas beautifulsoup4 lxml playwright nest_asyncio
+#           playwright install --with-deps chromium
 
-      - name: Run Crawler
-        env:
-          EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
-        run: |
-          # 파일 경로를 자동으로 찾아 실행 (중첩 폴더 대응)
-          FILE_PATH=$(find . -name "hotdeal_crawler.py" | head -n 1)
-          if [ -z "$FILE_PATH" ]; then
-            echo "Error: hotdeal_crawler.py 파일을 찾을 수 없습니다."
-            exit 1
-          fi
-          echo "스크립트 실행 경로: $FILE_PATH"
-          python "$FILE_PATH"
+#       - name: Run Crawler
+#         env:
+#           EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
+#         run: |
+#           # 파일 경로를 자동으로 찾아 실행 (중첩 폴더 대응)
+#           FILE_PATH=$(find . -name "hotdeal_crawler.py" | head -n 1)
+#           if [ -z "$FILE_PATH" ]; then
+#             echo "Error: hotdeal_crawler.py 파일을 찾을 수 없습니다."
+#             exit 1
+#           fi
+#           echo "스크립트 실행 경로: $FILE_PATH"
+#           python "$FILE_PATH"
